@@ -84,10 +84,10 @@ class InstructorScheduler:
         if self.time_slots_df is None:
             print("Error: Time slot data must be loaded first")
             return None
-        
+
         # Create the constraint satisfaction problem
         prob = LpProblem("Instructor_Scheduling", LpMinimize)
-        
+
         # Extract input parameters
         courses = list(self.courses_df['Course'])
         rooms = list(self.rooms_df['Room'])
@@ -97,6 +97,10 @@ class InstructorScheduler:
         # Create dictionaries for enrollments and capacities
         enrollments = dict(zip(self.courses_df['Course'], self.courses_df['Enrollment']))
         capacities = dict(zip(self.rooms_df['Room'], self.rooms_df['Capacity']))
+
+        # Create dictionaries for course and time slot types
+        course_types = dict(zip(self.courses_df['Course'], self.courses_df['Type']))
+        slot_types = dict(zip(self.time_slots_df['Slot'], self.time_slots_df['Type']))
 
         # Create matrix a; a[(instructor, course)] = 1 if instructor teaches course
         a = {}
@@ -109,28 +113,30 @@ class InstructorScheduler:
 
         # Create binary decision variables using LpVariable.dicts
         # x[(course, room, time)] = 1 if course is assigned to room at time slot
-        indices = [(course, room, t) for course in courses for room in rooms for t in time_slots]
+        # Only create variables where course type matches time slot type
+        indices = [(course, room, t) for course in courses for room in rooms for t in time_slots if course_types[course] == slot_types[t]]
         x = LpVariable.dicts("x", indices, cat='Binary')
+        indices_set = set(indices)  # Convert to set for O(1) lookup in constraints
 
         # Course must be taught once
         for course in courses:
-            prob += lpSum(x[(course, room, t)] for room in rooms for t in time_slots) == 1
+            prob += lpSum(x[(course, room, t)] for room in rooms for t in time_slots if (course, room, t) in indices_set) == 1
 
         # Instructor can only be teaching one course at a time
         for instructor in instructors:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] * a[(instructor, course)] for course in courses for room in rooms) <= 1
+                prob += lpSum(x[(course, room, t)] * a[(instructor, course)] for course in courses for room in rooms if (course, room, t) in indices_set) <= 1
 
         # Room can only have one course at a time
         for room in rooms:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] for course in courses) <= 1
+                prob += lpSum(x[(course, room, t)] for course in courses if (course, room, t) in indices_set) <= 1
 
         # Room capacity constraints
         for room in rooms:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] * enrollments[course] for course in courses) <= capacities[room]
-        
+                prob += lpSum(x[(course, room, t)] * enrollments[course] for course in courses if (course, room, t) in indices_set) <= capacities[room]
+
         # Solve the problem
         prob.solve()
 
@@ -145,7 +151,7 @@ class InstructorScheduler:
         for course in courses:
             for room in rooms:
                 for t in time_slots:
-                    if x[(course, room, t)].varValue == 1:
+                    if (course, room, t) in indices_set and x[(course, room, t)].varValue == 1:
                         slot_info = self.time_slots_df[self.time_slots_df['Slot'] == t].iloc[0]
                         schedule_data.append({
                             'Course': course,

@@ -57,7 +57,7 @@ def visualize_schedule(schedule_df, rooms_df, output_file='output/schedule_visua
     # Get room info with capacity
     room_capacity = dict(zip(rooms_df['Room'], rooms_df['Capacity']))
     rooms = sorted(schedule_exp_df['Room'].unique(),
-                   key=lambda r: room_capacity.get(r, 0), reverse=True)
+                   key=lambda r: room_capacity.get(r, 0), reverse=False)  # Ascending for matplotlib (displays bottom-to-top)
 
     # Define day order
     day_order = ['M', 'T', 'W', 'TH', 'F']

@@ -9,6 +9,7 @@ import numpy as np
 from pulp import *
 import csv
 from typing import Dict, List, Tuple, Optional, Callable, Iterable
+from visualize_schedule import visualize_schedule
 
 
 # Sentinel value for "match all" in filter_keys
@@ -171,27 +172,26 @@ class InstructorScheduler:
         # Only create variables where course type matches time slot type
         keys = [(course, room, t) for course in courses for room in rooms for t in time_slots if course_types[course] == slot_types[t]]
         x = LpVariable.dicts("x", keys, cat='Binary')
-        key_set = set(keys)  # Convert to set for O(1) lookup in constraints
-        self._keys = key_set  # Store for later filtering
+        key_set = set(keys)  # Convert to set for filtering and iteration
 
         # Course must be taught once
         for course in courses:
-            prob += lpSum(x[(course, room, t)] for room in rooms for t in time_slots if (course, room, t) in key_set) == 1
+            prob += lpSum(x[k] for k in filter_keys(key_set, course=course)) == 1
 
         # Instructor can only be teaching one course at a time
         for instructor in instructors:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] * a[(instructor, course)] for course in courses for room in rooms if (course, room, t) in key_set) <= 1
+                prob += lpSum(x[k] * a[(instructor, k[0])] for k in filter_keys(key_set, time_slot=t)) <= 1
 
         # Room can only have one course at a time
         for room in rooms:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] for course in courses if (course, room, t) in key_set) <= 1
+                prob += lpSum(x[k] for k in filter_keys(key_set, room=room, time_slot=t)) <= 1
 
         # Room capacity constraints
         for room in rooms:
             for t in time_slots:
-                prob += lpSum(x[(course, room, t)] * enrollments[course] for course in courses if (course, room, t) in key_set) <= capacities[room]
+                prob += lpSum(x[k] * enrollments[k[0]] for k in filter_keys(key_set, room=room, time_slot=t)) <= capacities[room]
 
         # Solve the problem
         prob.solve()
@@ -204,60 +204,21 @@ class InstructorScheduler:
 
         # Create the schedule (dataframe with course, room, time slot)
         schedule_data = []
-        for course in courses:
-            for room in rooms:
-                for t in time_slots:
-                    if (course, room, t) in key_set and x[(course, room, t)].varValue == 1:
-                        slot_info = self.time_slots_df[self.time_slots_df['Slot'] == t].iloc[0]
-                        schedule_data.append({
-                            'Course': course,
-                            'Room': room,
-                            'Days': slot_info['Days'],
-                            'Start': slot_info['Start'],
-                            'End': slot_info['End'],
-                            'Instructor': self.courses_df[self.courses_df['Course'] == course]['Instructor'].values[0]
-                        })
+        for k in key_set:
+            if x[k].varValue == 1:
+                course, room, t = k
+                slot_info = self.time_slots_df[self.time_slots_df['Slot'] == t].iloc[0]
+                schedule_data.append({
+                    'Course': course,
+                    'Room': room,
+                    'Days': slot_info['Days'],
+                    'Start': slot_info['Start'],
+                    'End': slot_info['End'],
+                    'Instructor': self.courses_df[self.courses_df['Course'] == course]['Instructor'].values[0]
+                })
         self.schedule = pd.DataFrame(schedule_data)
 
         return self.schedule
-
-    def filter_schedule_keys(
-        self,
-        course: str | object = ALL,
-        room: str | object = ALL,
-        time_slot: str | object = ALL,
-        predicate: Optional[Callable[[str, str, str], bool]] = None
-    ) -> list[Tuple[str, str, str]]:
-        """
-        Filter valid scheduling keys based on criteria.
-
-        Must be called after optimize_schedule() has been called to ensure
-        keys are available.
-
-        Args:
-            course: Exact course name to match, or ALL to match all courses
-            room: Exact room name to match, or ALL to match all rooms
-            time_slot: Exact time slot to match, or ALL to match all time slots
-            predicate: Custom function (course, room, time_slot) -> bool
-
-        Returns:
-            Filtered list of keys from this scheduler's valid key set
-
-        Raises:
-            RuntimeError: If optimize_schedule() hasn't been called yet
-        """
-        if not hasattr(self, '_keys'):
-            raise RuntimeError(
-                "No keys available. Call optimize_schedule() first to generate valid keys."
-            )
-
-        return filter_keys(
-            self._keys,
-            course=course,
-            room=room,
-            time_slot=time_slot,
-            predicate=predicate
-        )
 
     def display_schedule(self):
         """Display the optimized schedule."""
@@ -296,6 +257,10 @@ def main():
         scheduler.optimize_schedule()
         scheduler.display_schedule()
         scheduler.save_schedule()
+
+        # Create visualization
+        if scheduler.schedule is not None:
+            visualize_schedule(scheduler.schedule, rooms)
     else:
         print("Failed to load required data files")
 

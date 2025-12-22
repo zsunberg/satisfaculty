@@ -133,6 +133,31 @@ class InstructorScheduler:
             print(f"Error loading time slots: {e}")
             return None
 
+    def make_overlap_predicate(self, time_slot: str, room: str | object = ALL, buffer_minutes: int = 15) -> Callable[[str, str, str], bool]:
+        """
+        Create a predicate that returns True if a key overlaps with the given time slot.
+
+        Args:
+            time_slot: The reference time slot to check overlaps against
+            room: Room to match, or ALL to match all rooms
+            buffer_minutes: Minutes before slot start to still count as overlap (default 15)
+        """
+        t_start = self.slot_start_minutes[time_slot]
+        t_days = self.slot_days[time_slot]
+
+        def predicate(course: str, r: str, slot: str) -> bool:
+            if room is not ALL and r != room:
+                return False
+            # Check if days overlap
+            if not self.slot_days[slot] & t_days:
+                return False
+            # Check time overlap
+            slot_start = self.slot_start_minutes[slot]
+            slot_end = self.slot_end_minutes[slot]
+            return slot_start <= t_start and slot_end > (t_start - buffer_minutes)
+
+        return predicate
+
     def setup_problem(self):
         """
         Set up the ILP problem with variables and constraints.
@@ -188,18 +213,6 @@ class InstructorScheduler:
         ])
         self.x = LpVariable.dicts("x", list(self.keys), cat='Binary')
 
-        # Course must be taught once
-        for course in self.courses:
-            self.prob += lpSum(self.x[k] for k in filter_keys(self.keys, course=course)) == 1
-
-        # Instructor can only be teaching one course at a time
-        for instructor in self.instructors:
-            for t in self.time_slots:
-                self.prob += lpSum(
-                    self.x[k] * self.a[(instructor, k[0])]
-                    for k in filter_keys(self.keys, time_slot=t)
-                ) <= 1
-
         # Create dictionaries for time slot start and end times (in minutes)
         self.slot_start_minutes = {
             slot: time_to_minutes(start)
@@ -214,25 +227,23 @@ class InstructorScheduler:
             for slot, days in zip(self.time_slots_df['Slot'], self.time_slots_df['Days'])
         }
 
-        # Room can only have one course at a time (checking for overlaps with 15-minute buffer)
+        # Course must be taught once
+        for course in self.courses:
+            self.prob += lpSum(self.x[k] for k in filter_keys(self.keys, course=course)) == 1
+
+        # Instructor can only be teaching one course at a time
+        for instructor in self.instructors:
+            for t in self.time_slots:
+                self.prob += lpSum(
+                    self.x[k] * self.a[(instructor, k[0])]
+                    for k in filter_keys(self.keys, predicate=self.make_overlap_predicate(t))
+                ) <= 1
+
+        # Room can only have one course at a time (checking for overlaps)
         for room in self.rooms:
             for t in self.time_slots:
-                t_start_minutes = self.slot_start_minutes[t]
-                t_days = self.slot_days[t]
-
-                def overlaps_with_t(course: str, r: str, slot: str) -> bool:
-                    if r != room:
-                        return False
-                    # Check if days overlap
-                    if not self.slot_days[slot] & t_days:  # No common days
-                        return False
-                    slot_start = self.slot_start_minutes[slot]
-                    slot_end = self.slot_end_minutes[slot]
-                    # Check if slot starts at or before t starts and ends after (t_start - 15 minutes)
-                    return slot_start <= t_start_minutes and slot_end > (t_start_minutes - 15)
-
                 self.prob += lpSum(
-                    self.x[k] for k in filter_keys(self.keys, predicate=overlaps_with_t)
+                    self.x[k] for k in filter_keys(self.keys, predicate=self.make_overlap_predicate(t, room=room))
                 ) <= 1
 
         # Room capacity constraints

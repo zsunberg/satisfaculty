@@ -9,9 +9,9 @@ import numpy as np
 from pulp import *
 import csv
 from typing import Dict, List, Tuple, Optional, Callable, Iterable
-from visualize_schedule import visualize_schedule
-from utils import time_to_minutes, expand_days
-from objective_base import ObjectiveBase
+from .visualize_schedule import visualize_schedule
+from .utils import time_to_minutes, expand_days
+from .objective_base import ObjectiveBase
 
 
 # Sentinel value for "match all" in filter_keys

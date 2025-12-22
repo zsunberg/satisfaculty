@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "satisfaculty"
+version = "0.1.0"
+description = "A course scheduling optimization tool using integer linear programming"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas~=2.3",
+    "numpy~=2.4",
+    "PuLP~=3.3",
+    "matplotlib~=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+include = ["satisfaculty*"]

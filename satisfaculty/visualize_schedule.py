@@ -10,7 +10,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 from datetime import datetime, timedelta
 import numpy as np
-from utils import time_to_minutes, minutes_to_time, expand_days
+from .utils import time_to_minutes, minutes_to_time, expand_days
 
 
 def visualize_schedule(schedule_df, rooms_df, output_file='output/schedule_visual.png'):

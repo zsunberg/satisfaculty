@@ -6,16 +6,12 @@ This shows how to define custom objective priorities for schedule optimization.
 Each user can create their own script with different objective orderings.
 """
 
-import sys
-sys.path.append('src')
-
-from scheduler import InstructorScheduler
-from objectives import (
+from satisfaculty import (
+    InstructorScheduler,
     MinimizeClassesBefore,
     MinimizeClassesAfter,
     MaximizePreferredRooms,
 )
-from visualize_schedule import visualize_schedule
 
 scheduler = InstructorScheduler()
 scheduler.load_rooms()

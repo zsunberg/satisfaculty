@@ -6,10 +6,10 @@ These demonstrate common scheduling objectives that can be combined
 in different orders to create customized optimization strategies.
 """
 
-from objective_base import ObjectiveBase
+from .objective_base import ObjectiveBase
 from pulp import lpSum
-from scheduler import filter_keys
-from utils import time_to_minutes
+from .scheduler import filter_keys
+from .utils import time_to_minutes
 from typing import Optional, List
 
 

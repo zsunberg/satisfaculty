@@ -2,8 +2,17 @@
 bin/
 include/
 lib/
-lib64/
+lib64
 pyvenv.cfg
+share/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Output
+output/
 
 # Python cache
 __pycache__/

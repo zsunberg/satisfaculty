@@ -9,9 +9,9 @@ Each user can create their own script with different constraint and objective co
 from satisfaculty import *
 
 scheduler = InstructorScheduler()
-scheduler.load_rooms('input/rooms.csv')
-scheduler.load_courses('input/courses.csv')
-scheduler.load_time_slots('input/time_slots.csv')
+scheduler.load_rooms('rooms.csv')
+scheduler.load_courses('courses.csv')
+scheduler.load_time_slots('time_slots.csv')
 
 # Add constraints (required for a valid schedule)
 scheduler.add_constraints([
@@ -29,5 +29,5 @@ objectives = [
 ]
 
 scheduler.lexicographic_optimize(objectives)
-scheduler.save_schedule('output/schedule.csv')
-scheduler.visualize_schedule('output/schedule_visual.png')
+scheduler.save_schedule('schedule.csv')
+scheduler.visualize_schedule('schedule_visual.png')

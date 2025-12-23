@@ -62,10 +62,10 @@ Tolerance allows flexibility for lower-priority objectives:
 ```python
 objectives = [
     # Must be exactly optimal (no tolerance)
-    MinimizeClassesBefore("9:00", instructor="Neogi", tolerance=0.0),
+    MinimizeClassesBefore("9:00", instructor="Nelson", tolerance=0.0),
 
     # Can be up to 10% suboptimal if it helps later objectives
-    MaximizePreferredRooms(["AERO 120"], tolerance=0.10),
+    MaximizePreferredRooms(["BLDG 120"], tolerance=0.10),
 
     # Can be up to 20% suboptimal
     MinimizeRoomChanges(tolerance=0.20),
@@ -131,11 +131,11 @@ The lexicographic optimizer prints detailed progress:
 ```
 === Lexicographic Optimization: 3 objectives ===
 
-[1/3] Optimizing: Minimize classes before 9:00 for Neogi
+[1/3] Optimizing: Minimize classes before 9:00 for Nelson
   ✓ Optimal value: 0.00
     Constraining: value ≤ 0.00
 
-[2/3] Optimizing: Maximize preferred rooms (AERO 120, AERO 220) (Lecture)
+[2/3] Optimizing: Maximize preferred rooms (BLDG 120, BLDG 220) (Lecture)
   ✓ Optimal value: 5.00
     Constraining: value ≥ 4.50 (tolerance: 10.0%)
 

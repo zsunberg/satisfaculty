@@ -104,7 +104,7 @@ class InstructorScheduler:
             self._constraints.append(constraint)
         print(f"Added {len(constraints)} constraint(s)")
 
-    def load_rooms(self, filename: str = 'input/rooms.csv'):
+    def load_rooms(self, filename: str = 'rooms.csv'):
         """Load room data from CSV file."""
         try:
             self.rooms_df = pd.read_csv(filename)
@@ -124,7 +124,7 @@ class InstructorScheduler:
             print(f"Error loading rooms: {e}")
             return None
     
-    def load_courses(self, filename: str = 'input/courses.csv'):
+    def load_courses(self, filename: str = 'courses.csv'):
         """Load course data from CSV file."""
         try:
             self.courses_df = pd.read_csv(filename)
@@ -144,7 +144,7 @@ class InstructorScheduler:
             print(f"Error loading courses: {e}")
             return None
 
-    def load_time_slots(self, filename: str = 'input/time_slots.csv'):
+    def load_time_slots(self, filename: str = 'time_slots.csv'):
         """Load time slot data from CSV file."""
         try:
             self.time_slots_df = pd.read_csv(filename)
@@ -418,17 +418,19 @@ class InstructorScheduler:
         else:
             print("No schedule available. Please run optimize_schedule() first.")
 
-    def save_schedule(self, filename: str = 'output/schedule.csv'):
+    def save_schedule(self, filename: str = 'schedule.csv'):
         """Save the optimized schedule to a CSV file."""
         if self.schedule is not None:
             import os
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            dirname = os.path.dirname(filename)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
             self.schedule.to_csv(filename, index=False)
             print(f"Schedule saved to {filename}")
         else:
             print("No schedule available to save. Please run optimize_schedule() first.")
 
-    def visualize_schedule(self, output_file='output/schedule_visual.png'):
+    def visualize_schedule(self, output_file='schedule_visual.png'):
         """
         Visualize the optimized schedule.
 
@@ -437,7 +439,7 @@ class InstructorScheduler:
         for the actual visualization logic.
 
         Args:
-            output_file: Path to save the visualization PNG (default: 'output/schedule_visual.png')
+            output_file: Path to save the visualization PNG (default: 'schedule_visual.png')
         """
         if self.schedule is not None:
             visualize_schedule(self.schedule, self.rooms_df, output_file)

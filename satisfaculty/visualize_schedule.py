@@ -13,7 +13,7 @@ import numpy as np
 from .utils import time_to_minutes, minutes_to_time, expand_days
 
 
-def visualize_schedule(schedule_df, rooms_df, output_file='output/schedule_visual.png'):
+def visualize_schedule(schedule_df, rooms_df, output_file='schedule_visual.png'):
     """Create a visual grid representation of the schedule."""
 
     # Expand schedule to have one row per day
@@ -135,7 +135,9 @@ def visualize_schedule(schedule_df, rooms_df, output_file='output/schedule_visua
 
     plt.tight_layout()
     import os
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    dirname = os.path.dirname(output_file)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"\nSchedule visualization saved to {output_file}")
     plt.close()
@@ -144,8 +146,8 @@ def visualize_schedule(schedule_df, rooms_df, output_file='output/schedule_visua
 def main():
     """Load schedule and create visualization."""
     print("Loading schedule data...")
-    schedule_df = pd.read_csv('output/schedule.csv')
-    rooms_df = pd.read_csv('input/rooms.csv')
+    schedule_df = pd.read_csv('schedule.csv')
+    rooms_df = pd.read_csv('rooms.csv')
 
     print(f"Loaded {len(schedule_df)} scheduled courses")
 

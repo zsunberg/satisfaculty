@@ -96,7 +96,7 @@ class RoomCapacity(ConstraintBase):
 class ForceRooms(ConstraintBase):
     """Forces specific courses to be assigned to specific rooms."""
 
-    def __init__(self, filename: str = 'input/courses.csv', column: str = 'Force Room'):
+    def __init__(self, filename: str = 'courses.csv', column: str = 'Force Room'):
         self.filename = filename
         self.column = column
         super().__init__(name=f"Force rooms ({column})")
@@ -119,7 +119,7 @@ class ForceRooms(ConstraintBase):
 class ForceTimeSlots(ConstraintBase):
     """Forces specific courses to be assigned to specific time slots."""
 
-    def __init__(self, filename: str = 'input/courses.csv', column: str = 'Force Time Slot'):
+    def __init__(self, filename: str = 'courses.csv', column: str = 'Force Time Slot'):
         self.filename = filename
         self.column = column
         super().__init__(name=f"Force time slots ({column})")

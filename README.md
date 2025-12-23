@@ -25,6 +25,17 @@ scheduler.lexicographic_optimize(objectives)
 scheduler.visualize_schedule()
 ```
 
+## Example
+
+See the `example/` directory for a complete working example with sample data. To run it:
+
+```bash
+cd example
+python example.py
+```
+
+![Example schedule output](docs/schedule_visual.png)
+
 ## Documentation
 
 - [Objectives Guide](docs/OBJECTIVES_GUIDE.md)

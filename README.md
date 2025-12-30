@@ -21,7 +21,7 @@ from satisfaculty import *
 
 scheduler = InstructorScheduler()
 
-# Load example data files
+# example data files are in the example directory of this repo
 scheduler.load_rooms('rooms.csv')
 scheduler.load_courses('courses.csv')
 scheduler.load_time_slots('time_slots.csv')
@@ -32,14 +32,10 @@ scheduler.add_constraints([
     NoInstructorOverlap(),
     NoRoomOverlap(),
     RoomCapacity(),
-    ForceRooms(),
-    ForceTimeSlots(),
 ])
 
-# Define optimization objectives
 objectives = [MinimizeClassesBefore("9:00")]
 scheduler.lexicographic_optimize(objectives)
-
 scheduler.visualize_schedule()
 ```
 

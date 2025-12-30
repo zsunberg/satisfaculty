@@ -17,7 +17,7 @@ pip install git+https://github.com/zsunberg/satisfaculty.git
 ## Usage
 
 ```python
-from satisfaculty import InstructorScheduler, MinimizeClassesBefore
+from satisfaculty import *
 
 scheduler = InstructorScheduler()
 
@@ -25,6 +25,14 @@ scheduler = InstructorScheduler()
 scheduler.load_rooms('rooms.csv')
 scheduler.load_courses('courses.csv')
 scheduler.load_time_slots('time_slots.csv')
+
+# Add constraints (required for a valid schedule)
+scheduler.add_constraints([
+    AssignAllCourses(),
+    NoInstructorOverlap(),
+    NoRoomOverlap(),
+    RoomCapacity(),
+])
 
 objectives = [MinimizeClassesBefore("9:00")]
 scheduler.lexicographic_optimize(objectives)

@@ -14,43 +14,13 @@ For the latest development version:
 pip install git+https://github.com/zsunberg/satisfaculty.git
 ```
 
-## Usage
-
-```python
-from satisfaculty import *
-
-scheduler = InstructorScheduler()
-
-# example data files are in the example directory of this repo
-scheduler.load_rooms('rooms.csv')
-scheduler.load_courses('courses.csv')
-scheduler.load_time_slots('time_slots.csv')
-
-# Add constraints (required for a valid schedule)
-scheduler.add_constraints([
-    AssignAllCourses(),
-    NoInstructorOverlap(),
-    NoRoomOverlap(),
-    RoomCapacity(),
-])
-
-objectives = [MinimizeClassesBefore("9:00")]
-scheduler.lexicographic_optimize(objectives)
-scheduler.visualize_schedule()
-```
-
-This will output a complete schedule:
-
-![Example schedule output](docs/schedule_visual.png)
-
-## Example
-
-Example data files and a script are available in the [`example/`](https://github.com/zsunberg/satisfaculty/tree/main/example) directory of the repository.
-
 ## Documentation
 
-- [Objectives Guide](docs/OBJECTIVES_GUIDE.md)
-- [Contributing](CONTRIBUTING.md)
+See the [full documentation](https://zsunberg.github.io/satisfaculty/) for usage, examples, and the objectives guide.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Acknowledgements
 

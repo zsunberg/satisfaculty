@@ -38,7 +38,7 @@ schedule = scheduler.lexicographic_optimize(objectives)
 
 ## List of Possible Objectives
 
-To see all built-in objectives, refer to the [`objectives` module](../satisfacult/objectives.py).
+To see all built-in objectives, refer to the {py:mod}`satisfaculty.objectives` module.
 
 ## Parameters
 

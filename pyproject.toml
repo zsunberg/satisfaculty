@@ -25,6 +25,11 @@ dependencies = [
 dev = [
     "pytest",
 ]
+docs = [
+    "sphinx",
+    "furo",
+    "myst-parser",
+]
 
 [project.urls]
 Repository = "https://github.com/zsunberg/satisfaculty"

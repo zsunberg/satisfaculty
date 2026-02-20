@@ -41,7 +41,6 @@ __all__ = [
     "AvoidRoomsForCourseType",
     "ForceRooms",
     "ForceTimeSlots",
-    "InstructorTravelBuffer",
     # Utilities
     "visualize_schedule",
 ]

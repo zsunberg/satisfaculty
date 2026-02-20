@@ -19,7 +19,6 @@ from .constraints import (
     AvoidRoomsForCourseType,
     ForceRooms,
     ForceTimeSlots,
-    InstructorTravelBuffer,
 )
 from .visualize_schedule import visualize_schedule
 

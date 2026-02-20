@@ -242,4 +242,3 @@ class SameTimeSlot(ConstraintBase):
                 count += 1
 
         return count
-

@@ -310,13 +310,12 @@ def visualize_schedule(schedule_df, rooms_df, output_file='schedule_visual.png',
 
             # Only show room name in box if this room is in a merged row
             if course['Room'] in rooms_in_merged_rows:
-                # Three-line label: Course, Room, (Instructor, Enrollment)
-                ax.text(text_x, text_y + 0.22, course['Course'],
-                       ha='center', va='center', fontsize=7, weight='bold')
-                ax.text(text_x, text_y, course['Room'],
-                       ha='center', va='center', fontsize=6, style='italic')
-                ax.text(text_x, text_y - 0.22, f"({course['Instructor']}, {int(course['Enrollment'])})",
-                       ha='center', va='center', fontsize=6)
+                # Two-line label: Course, (Room, Instructor, Enrollment)
+                ax.text(text_x, text_y + 0.15, course['Course'],
+                       ha='center', va='center', fontsize=8, weight='bold')
+                ax.text(text_x, text_y - 0.15,
+                       f"{course['Room']} ({course['Instructor']}, {int(course['Enrollment'])})",
+                       ha='center', va='center', fontsize=7)
             else:
                 # Original two-line label
                 ax.text(text_x, text_y + 0.15, course['Course'],

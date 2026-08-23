@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "satisfaculty"
-version = "0.2.3"
+version = "0.3.0"
 description = "A course scheduling optimization tool using integer linear programming"
 authors = [{name = "Zachary Sunberg", email = "zachary.sunberg@colorado.edu"}]
 license = {text = "MIT"}

@@ -55,8 +55,8 @@ Instead, improve the schedule by:
 A constraint or objective may name a course that isn't in the schedule at all, either because it is marked in the `Ignore` column of the courses file or because it simply isn't offered this term. Rather than failing, satisfaculty drops that course from the constraint or objective and prints a warning:
 
 ```
-Warning: No overlap for courses (C-101, C-102) refers to course 'C-102', which is
-not being scheduled (ignored or not offered); it will be skipped
+Warning: No overlap for courses (C-101, C-102, C-103) refers to courses 'C-102', 'C-103',
+which are not being scheduled (ignored or not offered); they will be skipped
 ```
 
 This means an administrator can mark a course as ignored without having to edit any Python code. Watch for the warnings, though: a `SameTimeSlot` or `MaximizeBackToBackCourses` with fewer than two courses left has nothing to do and is dropped entirely, which is also reported.

@@ -210,7 +210,7 @@ class InstructorScheduler:
         Courses may be missing because they were marked in the ignore column or
         because they are simply not in the course list this semester. Both are
         treated the same way: the name is dropped and, unless `warn` is False,
-        a warning is printed.
+        one warning naming all of them is printed.
 
         Must be called after setup_problem() has populated self.courses.
 
@@ -223,13 +223,18 @@ class InstructorScheduler:
             The subset of `courses` that is being scheduled, in the given order
         """
         available = set(self.courses)
-        present = []
-        for course in courses:
-            if course in available:
-                present.append(course)
-            elif warn:
-                print(f"Warning: {context} refers to course '{course}', which is not being "
-                      f"scheduled (ignored or not offered); it will be skipped")
+        present = [c for c in courses if c in available]
+
+        if warn:
+            missing = [c for c in courses if c not in available]
+            if missing:
+                names = ', '.join(f"'{c}'" for c in missing)
+                noun = "course" if len(missing) == 1 else "courses"
+                print(f"Warning: {context} refers to {noun} {names}, which "
+                      f"{'is' if len(missing) == 1 else 'are'} not being scheduled "
+                      f"(ignored or not offered); {'it' if len(missing) == 1 else 'they'} "
+                      f"will be skipped")
+
         return present
 
     def capacity_check(self) -> list[str]:

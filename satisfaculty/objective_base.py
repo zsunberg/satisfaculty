@@ -41,6 +41,7 @@ class ObjectiveBase(ABC):
         self.name = name
         self.sense = sense
         self.tolerance = tolerance
+        self._missing_courses_checked = False
 
         if sense not in ['minimize', 'maximize']:
             raise ValueError(f"sense must be 'minimize' or 'maximize', got '{sense}'")
@@ -65,6 +66,23 @@ class ObjectiveBase(ABC):
             PuLP expression to optimize (minimize or maximize based on self.sense)
         """
         pass
+
+    def _warn_once_about_missing_courses(self, scheduler):
+        """
+        Warn about courses named by this objective that are not being scheduled.
+
+        Objectives that filter by course simply never match a missing name, so
+        nothing needs to change about the expression -- this only complains.
+        evaluate() is called several times per solve (to set the objective, to
+        lock it, and to report values), so the warning is emitted only once.
+
+        Requires the subclass to set self.courses (a set/list of names, or None)
+        and self.warn_missing.
+        """
+        if self._missing_courses_checked or not self.courses:
+            return
+        self._missing_courses_checked = True
+        scheduler.resolve_courses(sorted(self.courses), self.name, warn=self.warn_missing)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name='{self.name}', sense='{self.sense}', tolerance={self.tolerance})"

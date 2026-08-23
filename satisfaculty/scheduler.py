@@ -166,11 +166,13 @@ class InstructorScheduler:
                 ignore_mask = self.courses_df[ignore_column].apply(
                     lambda x: pd.notna(x) and str(x).strip().lower() in ('true', '1', 'yes')
                 )
+                ignored = list(self.courses_df.loc[ignore_mask, 'Course'])
                 self.courses_df = self.courses_df[~ignore_mask]
                 ignored_count = original_count - len(self.courses_df)
 
                 if ignored_count > 0:
-                    print(f"Ignored {ignored_count} course(s) based on '{ignore_column}' column")
+                    print(f"Ignored {ignored_count} course(s) based on '{ignore_column}' column: "
+                          f"{', '.join(str(c) for c in ignored)}")
 
             print(f"Loaded {len(self.courses_df)} courses from {filename}")
             return self.courses_df
@@ -200,6 +202,35 @@ class InstructorScheduler:
         except Exception as e:
             print(f"Error loading time slots: {e}")
             return None
+
+    def resolve_courses(self, courses: Iterable[str], context: str, warn: bool = True) -> list[str]:
+        """
+        Narrow a list of course names to the ones actually being scheduled.
+
+        Courses may be missing because they were marked in the ignore column or
+        because they are simply not in the course list this semester. Both are
+        treated the same way: the name is dropped and, unless `warn` is False,
+        a warning is printed.
+
+        Must be called after setup_problem() has populated self.courses.
+
+        Args:
+            courses: Course names a constraint or objective refers to
+            context: Name of the constraint/objective, used in the warning
+            warn: If False, drop missing courses silently
+
+        Returns:
+            The subset of `courses` that is being scheduled, in the given order
+        """
+        available = set(self.courses)
+        present = []
+        for course in courses:
+            if course in available:
+                present.append(course)
+            elif warn:
+                print(f"Warning: {context} refers to course '{course}', which is not being "
+                      f"scheduled (ignored or not offered); it will be skipped")
+        return present
 
     def capacity_check(self) -> list[str]:
         """
@@ -555,27 +586,40 @@ class InstructorScheduler:
 
         # Track best schedule from completed objectives
         best_schedule = None
+        solved_any = False
 
         try:
             # Optimize each objective in order
             for i, objective in enumerate(objectives):
                 print(f"[{i+1}/{len(objectives)}] Optimizing: {objective.name}")
 
+                expr = objective.evaluate(self)
+
+                # An expression with no decision variables cannot be improved --
+                # typically a course filter that matched nothing because those
+                # courses are ignored or not offered. Skip it: its value is fixed,
+                # and handing PuLP an empty objective makes it attach a dummy
+                # variable to the problem that corrupts every later model file.
+                if len(expr) == 0:
+                    print("  ⚠ Skipped: this objective does not depend on any "
+                          "scheduled course\n")
+                    continue
+
                 # Set objective function
                 if objective.sense == 'minimize':
                     self.prob.sense = LpMinimize
-                    self.prob.setObjective(objective.evaluate(self))
                 else:
                     self.prob.sense = LpMaximize
-                    self.prob.setObjective(objective.evaluate(self))
+                self.prob.setObjective(expr)
 
-                # Use warmStart after first objective to provide feasible starting point
+                # Use warmStart after the first solve to provide a feasible starting point
                 solver = PULP_CBC_CMD(
                     msg=1 if self.solver_verbose else 0,
                     timeLimit=self.objective_timeout,
-                    warmStart=(i > 0)
+                    warmStart=solved_any
                 )
                 self.prob.solve(solver)
+                solved_any = True
 
                 # Check solution status
                 status = LpStatus[self.prob.status]
@@ -614,7 +658,7 @@ class InstructorScheduler:
                     if objective.sense == 'minimize':
                         bound = optimal_value * (1 + tolerance)
                         self.prob += (
-                            objective.evaluate(self) <= bound,
+                            expr <= bound,
                             f"lock_objective_{i}"
                         )
                         if tolerance > 0:
@@ -624,7 +668,7 @@ class InstructorScheduler:
                     else:  # maximize
                         bound = optimal_value * (1 - tolerance)
                         self.prob += (
-                            objective.evaluate(self) >= bound,
+                            expr >= bound,
                             f"lock_objective_{i}"
                         )
                         if tolerance > 0:
@@ -641,6 +685,21 @@ class InstructorScheduler:
                 return self.schedule
             else:
                 print("No complete schedule available yet")
+                return None
+
+        if not solved_any:
+            # Every objective was vacuous, so nothing has been solved yet; fall back
+            # to finding any feasible schedule.
+            print("No objective depends on the schedule; solving for feasibility only")
+            solver = PULP_CBC_CMD(
+                msg=1 if self.solver_verbose else 0,
+                timeLimit=self.objective_timeout
+            )
+            self.prob.solve(solver)
+            status = LpStatus[self.prob.status]
+            if status != 'Optimal' and not any(self.x[k].varValue == 1 for k in self.keys):
+                print(f"  ✗ No solution found (status: {status})")
+                self.schedule = None
                 return None
 
         # Extract final schedule

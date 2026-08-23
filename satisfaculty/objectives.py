@@ -40,7 +40,8 @@ class MinimizeClassesBefore(ObjectiveBase):
         courses: Optional[list[str]] = None,
         days: Optional[list[str]] = None,
         sense: str = 'minimize',
-        tolerance: float = 0.0
+        tolerance: float = 0.0,
+        warn_missing: bool = True
     ):
         """
         Args:
@@ -50,12 +51,14 @@ class MinimizeClassesBefore(ObjectiveBase):
             days: If specified, only count classes on these days (e.g., ['M', 'W', 'F'])
             sense: 'minimize' or 'maximize'
             tolerance: Fractional tolerance for lexicographic constraint
+            warn_missing: Warn about named courses that are not being scheduled
         """
         self.time = time
         self.time_minutes = time_to_minutes(time)
         self.instructor = instructor
         self.courses = set(courses) if courses else None
         self.days = set(days) if days else None
+        self.warn_missing = warn_missing
 
         name_parts = [f"classes before {time}"]
         if instructor:
@@ -70,6 +73,8 @@ class MinimizeClassesBefore(ObjectiveBase):
         )
 
     def evaluate(self, scheduler):
+        self._warn_once_about_missing_courses(scheduler)
+
         def matches_criteria(course, room, time_slot):
             # Check time constraint
             slot_start = scheduler.slot_start_minutes[time_slot]
@@ -112,7 +117,8 @@ class MinimizeClassesAfter(ObjectiveBase):
         course_type: Optional[str] = None,
         days: Optional[list[str]] = None,
         sense: str = 'minimize',
-        tolerance: float = 0.0
+        tolerance: float = 0.0,
+        warn_missing: bool = True
     ):
         """
         Args:
@@ -123,6 +129,7 @@ class MinimizeClassesAfter(ObjectiveBase):
             days: If specified, only count classes on these days (e.g., ['M', 'W', 'F'])
             sense: 'minimize' or 'maximize'
             tolerance: Fractional tolerance for lexicographic constraint
+            warn_missing: Warn about named courses that are not being scheduled
         """
         self.time = time
         self.time_minutes = time_to_minutes(time)
@@ -130,6 +137,7 @@ class MinimizeClassesAfter(ObjectiveBase):
         self.courses = set(courses) if courses else None
         self.course_type = course_type
         self.days = set(days) if days else None
+        self.warn_missing = warn_missing
 
         name_parts = [f"classes after {time}"]
         if instructor:
@@ -148,6 +156,8 @@ class MinimizeClassesAfter(ObjectiveBase):
         )
 
     def evaluate(self, scheduler):
+        self._warn_once_about_missing_courses(scheduler)
+
         def matches_criteria(course, room, time_slot):
             # Check time constraint (use end time to catch classes running past the threshold)
             slot_end = scheduler.slot_end_minutes[time_slot]
@@ -232,7 +242,8 @@ class MaximizeClassesInSlots(ObjectiveBase):
         courses: Optional[List[str]] = None,
         course_type: Optional[str] = None,
         tolerance: float = 0.0,
-        name: Optional[str] = None
+        name: Optional[str] = None,
+        warn_missing: bool = True
     ):
         """
         Args:
@@ -242,11 +253,13 @@ class MaximizeClassesInSlots(ObjectiveBase):
             course_type: If specified, only count this type ('Lecture' or 'Lab')
             tolerance: Fractional tolerance for lexicographic constraint
             name: Optional custom name for the objective
+            warn_missing: Warn about named courses that are not being scheduled
         """
         self.slots = set(slots)
         self.instructor = instructor
         self.courses = set(courses) if courses else None
         self.course_type = course_type
+        self.warn_missing = warn_missing
 
         if name is None:
             name_parts = [f"classes in {len(slots)} slot(s)"]
@@ -265,6 +278,8 @@ class MaximizeClassesInSlots(ObjectiveBase):
         )
 
     def evaluate(self, scheduler):
+        self._warn_once_about_missing_courses(scheduler)
+
         def matches_criteria(course, room, time_slot):
             # Check slot constraint
             if time_slot not in self.slots:
@@ -304,7 +319,8 @@ class MaximizePreferredRooms(ObjectiveBase):
         instructor: Optional[str] = None,
         courses: Optional[List[str]] = None,
         course_type: Optional[str] = None,
-        tolerance: float = 0.0
+        tolerance: float = 0.0,
+        warn_missing: bool = True
     ):
         """
         Args:
@@ -313,11 +329,13 @@ class MaximizePreferredRooms(ObjectiveBase):
             courses: If specified, only for these specific courses
             course_type: If specified, only for this type ('Lecture' or 'Lab')
             tolerance: Fractional tolerance for lexicographic constraint
+            warn_missing: Warn about named courses that are not being scheduled
         """
         self.preferred_rooms = set(preferred_rooms)
         self.instructor = instructor
         self.courses = set(courses) if courses else None
         self.course_type = course_type
+        self.warn_missing = warn_missing
 
         name_parts = [f"preferred rooms ({', '.join(preferred_rooms)})"]
         if instructor:
@@ -334,6 +352,8 @@ class MaximizePreferredRooms(ObjectiveBase):
         )
 
     def evaluate(self, scheduler):
+        self._warn_once_about_missing_courses(scheduler)
+
         def matches_criteria(course, room, time_slot):
             # Check room constraint
             if room not in self.preferred_rooms:
@@ -422,6 +442,12 @@ class MaximizeBackToBackCourses(ObjectiveBase):
     This objective rewards adjacent time slots (by start time) that are
     assigned to different courses in the specified list. Adjacency is
     evaluated within the same slot type and same days set.
+
+    Courses that are not being scheduled (ignored or not offered) are dropped
+    with a warning; with fewer than two left there is nothing to place
+    back-to-back and the objective is constant. Pass warn_missing=False for a
+    list that is deliberately carried between semesters and only partially
+    offered in any one of them.
     """
 
     _instance_count = 0
@@ -430,16 +456,19 @@ class MaximizeBackToBackCourses(ObjectiveBase):
         self,
         courses: List[str],
         same_room: bool = False,
-        tolerance: float = 0.0
+        tolerance: float = 0.0,
+        warn_missing: bool = True
     ):
         """
         Args:
             courses: List of course names to cluster back-to-back.
             same_room: If True, only count adjacency when both courses are in the same room.
             tolerance: Fractional tolerance for lexicographic constraint.
+            warn_missing: Warn about named courses that are not being scheduled
         """
         self.courses = list(courses)
         self.same_room = same_room
+        self.warn_missing = warn_missing
         self._built = False
         self._objective_expr = None
 
@@ -453,9 +482,14 @@ class MaximizeBackToBackCourses(ObjectiveBase):
         )
 
     def _build(self, scheduler):
-        missing = [c for c in self.courses if c not in scheduler.courses]
-        if missing:
-            raise ValueError(f"Unknown course(s) in MaximizeBackToBackCourses: {missing}")
+        courses = scheduler.resolve_courses(self.courses, self.name, warn=self.warn_missing)
+        if len(courses) < 2:
+            if self.warn_missing:
+                print(f"Warning: {self.name} has fewer than two courses left to schedule; "
+                      f"there is nothing to place back-to-back")
+            self._objective_expr = LpAffineExpression()
+            self._built = True
+            return
 
         # Group time slots by slot type and days set
         groups = {}
@@ -476,7 +510,7 @@ class MaximizeBackToBackCourses(ObjectiveBase):
 
         # Precompute course-slot assignment expressions (summing over rooms)
         course_slot_expr = {}
-        for course in self.courses:
+        for course in courses:
             for slot in scheduler.time_slots:
                 keys = filter_keys(scheduler.keys, course=course, time_slot=slot)
                 if keys:
@@ -485,7 +519,7 @@ class MaximizeBackToBackCourses(ObjectiveBase):
         # Precompute course-slot-room expressions when same_room is required
         course_slot_room_expr = {}
         if self.same_room:
-            for course in self.courses:
+            for course in courses:
                 for slot in scheduler.time_slots:
                     for room in scheduler.rooms:
                         keys = filter_keys(scheduler.keys, course=course, room=room, time_slot=slot)
@@ -494,8 +528,8 @@ class MaximizeBackToBackCourses(ObjectiveBase):
 
         adjacency_vars = []
         var_count = 0
-        for i, course_a in enumerate(self.courses):
-            for course_b in self.courses[i + 1:]:
+        for i, course_a in enumerate(courses):
+            for course_b in courses[i + 1:]:
                 for s1, s2 in adjacent_slots:
                     if self.same_room:
                         for room in scheduler.rooms:

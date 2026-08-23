@@ -49,3 +49,23 @@ Instead, improve the schedule by:
 
 - **Refining objectives** to better match your goals
 - **Removing constraints** that are blocking better solutions
+
+## Courses That Are Not Being Scheduled
+
+A constraint or objective may name a course that isn't in the schedule at all, either because it is marked in the `Ignore` column of the courses file or because it simply isn't offered this term. Rather than failing, satisfaculty drops that course from the constraint or objective and prints a warning:
+
+```
+Warning: No overlap for courses (C-101, C-102) refers to course 'C-102', which is
+not being scheduled (ignored or not offered); it will be skipped
+```
+
+This means an administrator can mark a course as ignored without having to edit any Python code. Watch for the warnings, though: a `SameTimeSlot` or `MaximizeBackToBackCourses` with fewer than two courses left has nothing to do and is dropped entirely, which is also reported.
+
+It is common to carry a list of courses from term to term when only some of them are offered in any given term. Those lists would warn every run, so pass `warn_missing=False` to silence them:
+
+```python
+# Ten structures courses that shouldn't overlap when offered; only a few run each term.
+NoCourseOverlap(structures_courses, warn_missing=False)
+```
+
+`warn_missing` is accepted by `NoCourseOverlap`, `SameTimeSlot`, `MaximizeBackToBackCourses`, and the objectives that take a `courses` argument. Leave it at its default of `True` for lists where a missing course means a typo.

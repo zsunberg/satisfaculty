@@ -166,25 +166,34 @@ class ForceTimeSlots(ConstraintBase):
 
 
 class NoCourseOverlap(ConstraintBase):
-    """Prevents a specified list of courses from overlapping in time."""
+    """Prevents a specified list of courses from overlapping in time.
+
+    Courses that are not being scheduled (ignored or not offered) are dropped
+    with a warning. Pass warn_missing=False for a list that is deliberately
+    carried between semesters and only partially offered in any one of them.
+    """
 
     _instance_count = 0
 
-    def __init__(self, courses: list[str], name: str | None = None):
+    def __init__(self, courses: list[str], name: str | None = None, warn_missing: bool = True):
         self.courses = set(courses)
+        self.warn_missing = warn_missing
         NoCourseOverlap._instance_count += 1
         self._id = NoCourseOverlap._instance_count
         display_name = name if name else ', '.join(courses)
         super().__init__(name=f"No overlap for courses ({display_name})")
 
     def apply(self, scheduler) -> int:
+        courses = set(scheduler.resolve_courses(
+            sorted(self.courses), self.name, warn=self.warn_missing))
+
         day_start_pairs = scheduler.get_day_start_pairs()
 
         count = 0
         for day, start_minutes in day_start_pairs:
             overlapping_keys = [
                 k for k in scheduler.keys
-                if k[0] in self.courses
+                if k[0] in courses
                 and scheduler.slot_overlaps(k[2], day, start_minutes)
             ]
 
@@ -198,12 +207,19 @@ class NoCourseOverlap(ConstraintBase):
 
 
 class SameTimeSlot(ConstraintBase):
-    """Forces a specified list of courses to be scheduled in the same time slot."""
+    """Forces a specified list of courses to be scheduled in the same time slot.
+
+    Courses that are not being scheduled (ignored or not offered) are dropped
+    with a warning; if fewer than two remain the constraint is skipped. Pass
+    warn_missing=False for a list that is deliberately carried between semesters
+    and only partially offered in any one of them.
+    """
 
     _instance_count = 0
 
-    def __init__(self, courses: list[str], name: str | None = None):
+    def __init__(self, courses: list[str], name: str | None = None, warn_missing: bool = True):
         self.courses = list(courses)
+        self.warn_missing = warn_missing
         SameTimeSlot._instance_count += 1
         self._id = SameTimeSlot._instance_count
         display_name = name if name else ', '.join(courses)
@@ -213,22 +229,25 @@ class SameTimeSlot(ConstraintBase):
         if len(self.courses) < 2:
             return 0
 
+        courses = scheduler.resolve_courses(self.courses, self.name, warn=self.warn_missing)
+        if len(courses) < 2:
+            if self.warn_missing:
+                print(f"Warning: {self.name} has fewer than two courses left to schedule; "
+                      f"skipping it")
+            return 0
+
         # Validate that all courses have the same slot type
-        slot_types = set()
-        for course in self.courses:
-            if course not in scheduler.course_slot_type:
-                raise ValueError(f"Course '{course}' not found in scheduler")
-            slot_types.add(scheduler.course_slot_type[course])
+        slot_types = {scheduler.course_slot_type[c] for c in courses}
 
         if len(slot_types) > 1:
-            course_slot_info = [f"{c} ({scheduler.course_slot_type[c]})" for c in self.courses]
+            course_slot_info = [f"{c} ({scheduler.course_slot_type[c]})" for c in courses]
             raise ValueError(
                 f"SameTimeSlot constraint requires all courses to have the same slot type. "
                 f"Got courses with different slot types: {', '.join(course_slot_info)}"
             )
 
         count = 0
-        first_course = self.courses[0]
+        first_course = courses[0]
 
         # For each time slot, if the first course is assigned to it,
         # then all other courses must also be assigned to that time slot
@@ -240,7 +259,7 @@ class SameTimeSlot(ConstraintBase):
             # Sum of first course's assignments to this time slot (across all rooms)
             first_sum = lpSum(scheduler.x[k] for k in first_keys)
 
-            for other_course in self.courses[1:]:
+            for other_course in courses[1:]:
                 other_keys = filter_keys(scheduler.keys, course=other_course, time_slot=time_slot)
                 if not other_keys:
                     continue

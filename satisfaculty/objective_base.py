@@ -76,13 +76,15 @@ class ObjectiveBase(ABC):
         evaluate() is called several times per solve (to set the objective, to
         lock it, and to report values), so the warning is emitted only once.
 
-        Requires the subclass to set self.courses (a set/list of names, or None)
-        and self.warn_missing.
+        Requires the subclass to set self.courses (a set/list of names, or None);
+        self.warn_missing defaults to True if the subclass does not set it.
         """
-        if self._missing_courses_checked or not self.courses:
+        courses = getattr(self, 'courses', None)
+        if self._missing_courses_checked or not courses:
             return
         self._missing_courses_checked = True
-        scheduler.resolve_courses(sorted(self.courses), self.name, warn=self.warn_missing)
+        scheduler.resolve_courses(
+            sorted(courses), self.name, warn=getattr(self, 'warn_missing', True))
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name='{self.name}', sense='{self.sense}', tolerance={self.tolerance})"

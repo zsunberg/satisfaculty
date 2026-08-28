@@ -435,6 +435,64 @@ class MinimizePreferredRooms(ObjectiveBase):
         return lpSum(scheduler.x[k] for k in filtered)
 
 
+
+
+class MinimizeRoomOrderByCourseRank(ObjectiveBase):
+    """
+    Minimize room-name order weighted by per-course rank.
+
+    Uses a numeric Rank column from courses.csv (higher rank = stronger preference).
+    Rooms are ordered lexicographically by name, and assignments to "later" rooms
+    are penalized in proportion to course rank.
+    """
+
+    def __init__(
+        self,
+        rank_column: str = "Rank",
+        tolerance: float = 0.0
+    ):
+        """
+        Args:
+            rank_column: Column in courses.csv containing numeric ranks
+            tolerance: Fractional tolerance for lexicographic constraint
+        """
+        self.rank_column = rank_column
+
+        super().__init__(
+            name=f"Minimize room order by course rank ({rank_column})",
+            sense='minimize',
+            tolerance=tolerance
+        )
+
+    def evaluate(self, scheduler):
+        if self.rank_column not in scheduler.courses_df.columns:
+            return LpAffineExpression()
+
+        ranks = dict(zip(scheduler.courses_df['Course'], scheduler.courses_df[self.rank_column]))
+        room_order = {room: idx for idx, room in enumerate(sorted(scheduler.rooms))}
+
+        def to_weight(value):
+            if value is None:
+                return 0.0
+            try:
+                weight = float(value)
+            except (TypeError, ValueError):
+                return 0.0
+            if weight != weight:  # NaN check
+                return 0.0
+            return weight
+
+        terms = []
+        for course, room, time_slot in scheduler.keys:
+            weight = to_weight(ranks.get(course))
+            if weight > 0:
+                terms.append(weight * room_order[room] * scheduler.x[(course, room, time_slot)])
+
+        if not terms:
+            return LpAffineExpression()
+        return lpSum(terms)
+
+
 class MaximizeBackToBackCourses(ObjectiveBase):
     """
     Maximize back-to-back placement for a specified set of courses.

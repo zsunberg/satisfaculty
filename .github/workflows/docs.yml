@@ -33,9 +33,6 @@ jobs:
       - name: Build docs
         run: sphinx-build -b html docs docs/_build/html
 
-      - name: Add CNAME for custom domain
-        run: echo "satisfaculty.com" > docs/_build/html/CNAME
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

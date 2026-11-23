@@ -1,6 +1,6 @@
 # satisfaculty
 
-**[View on GitHub](https://github.com/zsunberg/satisfaculty)**
+**[View on GitHub](https://github.com/CU-AES-Operations/satisfaculty)**
 
 Are you a faculty member or administrator trying to create a schedule that obeys tricky constraints and satisfies many objectives? Satisfaculty can help!
 
@@ -47,7 +47,7 @@ This will output the schedule above.
 
 ## Example
 
-Example data files and a script are available in the [`example/`](https://github.com/zsunberg/satisfaculty/tree/main/example) directory of the repository.
+Example data files and a script are available in the [`example/`](https://github.com/CU-AES-Operations/satisfaculty/tree/main/example) directory of the repository.
 
 ## Contents
 

@@ -32,7 +32,7 @@ docs = [
 ]
 
 [project.urls]
-Repository = "https://github.com/zsunberg/satisfaculty"
+Repository = "https://github.com/CU-AES-Operations/satisfaculty"
 
 [tool.setuptools.packages.find]
 include = ["satisfaculty*"]
